@@ -18,7 +18,6 @@ refs.loadMoreBtn.addEventListener('click', onLoadMoreBtnClick);
 function onSearch(event) {
   event.preventDefault();
  const searchImage = refs.input.value.trim();
-  //   console.log(searchImage);
   refs.gallery.innerHTML = '';
   page = 1;
   if (searchImage) {
@@ -30,7 +29,7 @@ function onSearch(event) {
 
 async function getImages(searchImage) {
   try {
-    const API_URL='https://pixabay.com/api/';
+    const API_URL = 'https://pixabay.com/api/';
     const API_KEY = '35719237-a3b5fc2cde12a551a7cd51d6d';
     const params = {
       key: API_KEY,
@@ -41,5 +40,78 @@ async function getImages(searchImage) {
       per_page: 40,
       page: page,
     };
-    
+    const response = await axios.get(API_URL, { params });
+    if (response.data.hits.length > 0 && page === 1) {
+      Notiflix.Notify.success(
+        `Hooray! We found ${response.data.totalHits} images.`
+      );
+      refs.loadMoreBtn.style.display = 'block';
+    }
+    if (response.data.hits.length === 0) {
+      Notiflix.Notify.failure(
+        `"Sorry, there are no images matching your search query. Please try again."`
+      );
+      refs.loadMoreBtn.style.display = 'none';
+    }
+    if (response.data.hits.length < 40 && response.data.hits.length > 0) {
+      refs.loadMoreBtn.style.display = 'none';
+      Notiflix.Notify.info(
+        "We're sorry, but you've reached the end of search results."
+      );
+    }
+    createGallery(response.data);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function createGallery(array) {
+  const markup = array.hits
+    .map(item => `<a href = "${item.largeImageURL}">
+  <div class="photo-card">
+  <img src="${item.webformatURL}" alt="${item.tags}" loading="lazy" />
+  <div class="info">
+    <p class="info-item">
+      <b>Likes</b>${item.likes}
+    </p>
+    <p class="info-item">
+      <b>Views</b>${item.views}
+    </p>
+    <p class="info-item">
+      <b>Comments</b>${item.comments}
+    </p>
+    <p class="info-item">
+      <b>Downloads</b>${item.downloads}
+    </p>
+  </div>
+</div>
+  </a>`
+    )
+    .join('');
+  refs.gallery.insertAdjacentHTML('beforeend', markup);
+  simpleLightbox.refresh();
+  if (page > 1) {
+    smoothScroll();
+  }
+}
+const simpleLightbox = new SimpleLightbox('.gallery a', {
+  captionDelay: 250,
+  captionsData: 'alt',
+});
+
+function onLoadMoreBtnClick(event) {
+  event.preventDefault();
+  const searchImage = refs.input.value.trim();
+  page += 1;
+  getImages(searchImage);
+}
+function smoothScroll() {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+  
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
 }
